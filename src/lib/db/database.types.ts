@@ -24,7 +24,7 @@ export type SightingView = "list" | "gallery";
 export type GalleryDensity = "compact" | "comfortable" | "spacious";
 
 export type Database = {
-  public: {
+  transitspotter: {
     Tables: {
       profiles: {
         Row: {
@@ -489,15 +489,15 @@ export type Database = {
   };
 };
 
-export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-export type UserPreferences = Database["public"]["Tables"]["user_preferences"]["Row"];
-export type Operator = Database["public"]["Tables"]["operators"]["Row"];
-export type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
-export type Sighting = Database["public"]["Tables"]["sightings"]["Row"];
-export type Photo = Database["public"]["Tables"]["photos"]["Row"];
+export type Profile = Database["transitspotter"]["Tables"]["profiles"]["Row"];
+export type UserPreferences = Database["transitspotter"]["Tables"]["user_preferences"]["Row"];
+export type Operator = Database["transitspotter"]["Tables"]["operators"]["Row"];
+export type Vehicle = Database["transitspotter"]["Tables"]["vehicles"]["Row"];
+export type Sighting = Database["transitspotter"]["Tables"]["sightings"]["Row"];
+export type Photo = Database["transitspotter"]["Tables"]["photos"]["Row"];
 export type StatusHistoryEntry =
-  Database["public"]["Tables"]["vehicle_status_history"]["Row"];
-export type VehicleOverview = Database["public"]["Views"]["vehicle_overview"]["Row"];
-export type SightingOverview = Database["public"]["Views"]["sighting_overview"]["Row"];
-export type PhotoOverview = Database["public"]["Views"]["photo_overview"]["Row"];
-export type OperatorOverview = Database["public"]["Views"]["operator_overview"]["Row"];
+  Database["transitspotter"]["Tables"]["vehicle_status_history"]["Row"];
+export type VehicleOverview = Database["transitspotter"]["Views"]["vehicle_overview"]["Row"];
+export type SightingOverview = Database["transitspotter"]["Views"]["sighting_overview"]["Row"];
+export type PhotoOverview = Database["transitspotter"]["Views"]["photo_overview"]["Row"];
+export type OperatorOverview = Database["transitspotter"]["Views"]["operator_overview"]["Row"];

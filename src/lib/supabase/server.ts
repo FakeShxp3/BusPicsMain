@@ -9,6 +9,7 @@ import type {
   UserPreferences,
 } from "@/lib/db/database.types";
 import {
+  DB_SCHEMA,
   SUPABASE_ANON_KEY,
   SUPABASE_URL,
   isSupabaseConfigured,
@@ -28,6 +29,7 @@ export async function createClient(): Promise<SupabaseClient<Database>> {
   const cookieStore = await cookies();
 
   return createServerClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    db: { schema: DB_SCHEMA },
     cookies: {
       getAll() {
         return cookieStore.getAll();

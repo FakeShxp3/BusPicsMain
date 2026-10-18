@@ -5,7 +5,7 @@
 -- ---------------------------------------------------------------------------
 -- updated_at bookkeeping
 -- ---------------------------------------------------------------------------
-create or replace function public.set_updated_at()
+create or replace function transitspotter.set_updated_at()
 returns trigger
 language plpgsql
 set search_path = ''
@@ -16,47 +16,47 @@ begin
 end;
 $$;
 
-drop trigger if exists profiles_set_updated_at on public.profiles;
+drop trigger if exists profiles_set_updated_at on transitspotter.profiles;
 create trigger profiles_set_updated_at
-  before update on public.profiles
-  for each row execute function public.set_updated_at();
+  before update on transitspotter.profiles
+  for each row execute function transitspotter.set_updated_at();
 
-drop trigger if exists user_preferences_set_updated_at on public.user_preferences;
+drop trigger if exists user_preferences_set_updated_at on transitspotter.user_preferences;
 create trigger user_preferences_set_updated_at
-  before update on public.user_preferences
-  for each row execute function public.set_updated_at();
+  before update on transitspotter.user_preferences
+  for each row execute function transitspotter.set_updated_at();
 
-drop trigger if exists operators_set_updated_at on public.operators;
+drop trigger if exists operators_set_updated_at on transitspotter.operators;
 create trigger operators_set_updated_at
-  before update on public.operators
-  for each row execute function public.set_updated_at();
+  before update on transitspotter.operators
+  for each row execute function transitspotter.set_updated_at();
 
-drop trigger if exists vehicles_set_updated_at on public.vehicles;
+drop trigger if exists vehicles_set_updated_at on transitspotter.vehicles;
 create trigger vehicles_set_updated_at
-  before update on public.vehicles
-  for each row execute function public.set_updated_at();
+  before update on transitspotter.vehicles
+  for each row execute function transitspotter.set_updated_at();
 
-drop trigger if exists sightings_set_updated_at on public.sightings;
+drop trigger if exists sightings_set_updated_at on transitspotter.sightings;
 create trigger sightings_set_updated_at
-  before update on public.sightings
-  for each row execute function public.set_updated_at();
+  before update on transitspotter.sightings
+  for each row execute function transitspotter.set_updated_at();
 
-drop trigger if exists photos_set_updated_at on public.photos;
+drop trigger if exists photos_set_updated_at on transitspotter.photos;
 create trigger photos_set_updated_at
-  before update on public.photos
-  for each row execute function public.set_updated_at();
+  before update on transitspotter.photos
+  for each row execute function transitspotter.set_updated_at();
 
 -- ---------------------------------------------------------------------------
 -- new auth user bootstrap (profile + preferences)
 -- ---------------------------------------------------------------------------
-create or replace function public.handle_new_user()
+create or replace function transitspotter.handle_new_user()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
 as $$
 begin
-  insert into public.profiles (id, email, display_name)
+  insert into transitspotter.profiles (id, email, display_name)
   values (
     new.id,
     new.email,
@@ -68,7 +68,7 @@ begin
   )
   on conflict (id) do nothing;
 
-  insert into public.user_preferences (user_id)
+  insert into transitspotter.user_preferences (user_id)
   values (new.id)
   on conflict (user_id) do nothing;
 
@@ -76,25 +76,25 @@ begin
 end;
 $$;
 
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
+drop trigger if exists transitspotter_on_auth_user_created on auth.users;
+create trigger transitspotter_on_auth_user_created
   after insert on auth.users
-  for each row execute function public.handle_new_user();
+  for each row execute function transitspotter.handle_new_user();
 
 -- Backfill for accounts created before the trigger existed.
-insert into public.profiles (id, email, display_name)
+insert into transitspotter.profiles (id, email, display_name)
 select u.id, u.email, split_part(coalesce(u.email, 'spotter'), '@', 1)
 from auth.users u
 on conflict (id) do nothing;
 
-insert into public.user_preferences (user_id)
+insert into transitspotter.user_preferences (user_id)
 select u.id from auth.users u
 on conflict (user_id) do nothing;
 
 -- ---------------------------------------------------------------------------
 -- vehicle cover photograph must belong to one of that vehicle's sightings
 -- ---------------------------------------------------------------------------
-create or replace function public.validate_vehicle_cover_photo()
+create or replace function transitspotter.validate_vehicle_cover_photo()
 returns trigger
 language plpgsql
 set search_path = ''
@@ -103,8 +103,8 @@ begin
   if new.cover_photo_id is not null then
     if not exists (
       select 1
-      from public.photos p
-      join public.sightings s on s.id = p.sighting_id
+      from transitspotter.photos p
+      join transitspotter.sightings s on s.id = p.sighting_id
       where p.id = new.cover_photo_id
         and p.user_id = new.user_id
         and s.user_id = new.user_id
@@ -118,15 +118,15 @@ begin
 end;
 $$;
 
-drop trigger if exists vehicles_validate_cover_photo on public.vehicles;
+drop trigger if exists vehicles_validate_cover_photo on transitspotter.vehicles;
 create trigger vehicles_validate_cover_photo
-  before insert or update of cover_photo_id on public.vehicles
-  for each row execute function public.validate_vehicle_cover_photo();
+  before insert or update of cover_photo_id on transitspotter.vehicles
+  for each row execute function transitspotter.validate_vehicle_cover_photo();
 
 -- ---------------------------------------------------------------------------
 -- record_vehicle_status: atomically append history and update the vehicle
 -- ---------------------------------------------------------------------------
-create or replace function public.record_vehicle_status(
+create or replace function transitspotter.record_vehicle_status(
   p_vehicle_id uuid,
   p_status text,
   p_changed_on date default current_date,
@@ -147,32 +147,32 @@ begin
 
   -- Row Level Security restricts this lookup to the caller's own vehicles.
   select v.status into v_previous
-  from public.vehicles v
+  from transitspotter.vehicles v
   where v.id = p_vehicle_id;
 
   if not found then
     raise exception 'Vehicle not found' using errcode = 'no_data_found';
   end if;
 
-  insert into public.vehicle_status_history
+  insert into transitspotter.vehicle_status_history
     (user_id, vehicle_id, previous_status, new_status, changed_on, notes)
   values
     (auth.uid(), p_vehicle_id, v_previous, p_status, v_effective_date, nullif(btrim(p_notes), ''));
 
-  update public.vehicles
+  update transitspotter.vehicles
   set status = p_status,
       status_verified_on = v_effective_date
   where id = p_vehicle_id;
 end;
 $$;
 
-revoke all on function public.record_vehicle_status(uuid, text, date, text) from public;
-grant execute on function public.record_vehicle_status(uuid, text, date, text) to authenticated;
+revoke all on function transitspotter.record_vehicle_status(uuid, text, date, text) from public;
+grant execute on function transitspotter.record_vehicle_status(uuid, text, date, text) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- vehicle_overview: denormalised read model for fleet list / detail pages
 -- ---------------------------------------------------------------------------
-create or replace view public.vehicle_overview
+create or replace view transitspotter.vehicle_overview
 with (security_invoker = true)
 as
 select
@@ -202,32 +202,32 @@ select
   s.first_spotted_at,
   s.last_spotted_at,
   coalesce(s.routes, array[]::text[]) as routes
-from public.vehicles v
-left join public.operators o on o.id = v.operator_id
-left join public.photos cp on cp.id = v.cover_photo_id
+from transitspotter.vehicles v
+left join transitspotter.operators o on o.id = v.operator_id
+left join transitspotter.photos cp on cp.id = v.cover_photo_id
 left join lateral (
   select
     count(*)::integer as sighting_count,
     min(si.spotted_at) as first_spotted_at,
     max(si.spotted_at) as last_spotted_at,
     array_agg(distinct si.route order by si.route) filter (where si.route is not null) as routes
-  from public.sightings si
+  from transitspotter.sightings si
   where si.vehicle_id = v.id
 ) s on true
 left join lateral (
   select count(*)::integer as photo_count
-  from public.photos p
-  join public.sightings sp on sp.id = p.sighting_id
+  from transitspotter.photos p
+  join transitspotter.sightings sp on sp.id = p.sighting_id
   where sp.vehicle_id = v.id
 ) pc on true;
 
-comment on view public.vehicle_overview is
+comment on view transitspotter.vehicle_overview is
   'Vehicle rows enriched with operator, sighting and photo aggregates. Respects RLS via security_invoker.';
 
 -- ---------------------------------------------------------------------------
 -- sighting_overview: denormalised read model for lists, map and galleries
 -- ---------------------------------------------------------------------------
-create or replace view public.sighting_overview
+create or replace view transitspotter.sighting_overview
 with (security_invoker = true)
 as
 select
@@ -263,22 +263,22 @@ select
   coalesce(p.photo_count, 0) as photo_count,
   p.cover_photo_id,
   p.cover_storage_path
-from public.sightings s
-join public.vehicles v on v.id = s.vehicle_id
-left join public.operators o on o.id = v.operator_id
+from transitspotter.sightings s
+join transitspotter.vehicles v on v.id = s.vehicle_id
+left join transitspotter.operators o on o.id = v.operator_id
 left join lateral (
   select
     count(*)::integer as photo_count,
     (array_agg(ph.id order by ph.is_cover desc, ph.sort_order asc, ph.created_at asc))[1] as cover_photo_id,
     (array_agg(ph.storage_path order by ph.is_cover desc, ph.sort_order asc, ph.created_at asc))[1] as cover_storage_path
-  from public.photos ph
+  from transitspotter.photos ph
   where ph.sighting_id = s.id
 ) p on true;
 
-comment on view public.sighting_overview is
+comment on view transitspotter.sighting_overview is
   'Sightings enriched with vehicle/operator details and cover photo. Respects RLS via security_invoker.';
 
-grant select on public.vehicle_overview to authenticated;
-grant select on public.sighting_overview to authenticated;
-revoke all on public.vehicle_overview from anon;
-revoke all on public.sighting_overview from anon;
+grant select on transitspotter.vehicle_overview to authenticated;
+grant select on transitspotter.sighting_overview to authenticated;
+revoke all on transitspotter.vehicle_overview from anon;
+revoke all on transitspotter.sighting_overview from anon;

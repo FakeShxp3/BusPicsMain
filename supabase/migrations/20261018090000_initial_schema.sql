@@ -1,4 +1,10 @@
 -- ===========================================================================
+-- TransitSpotter lives in a dedicated schema so it can coexist with
+-- other applications in the same Supabase project.
+-- ===========================================================================
+create schema if not exists transitspotter;
+grant usage on schema transitspotter to authenticated, service_role;
+
 -- TransitSpotter - 001 initial schema
 -- Requires PostgreSQL 15+ (Supabase).
 -- ===========================================================================
@@ -8,7 +14,7 @@ create extension if not exists pg_trgm with schema extensions;
 -- ---------------------------------------------------------------------------
 -- profiles: one row per authenticated user (account metadata only)
 -- ---------------------------------------------------------------------------
-create table if not exists public.profiles (
+create table if not exists transitspotter.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   email text,
   display_name text check (display_name is null or length(btrim(display_name)) between 1 and 80),
@@ -16,12 +22,12 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
-comment on table public.profiles is 'Account metadata for each authenticated user.';
+comment on table transitspotter.profiles is 'Account metadata for each authenticated user.';
 
 -- ---------------------------------------------------------------------------
 -- user_preferences: interface and display preferences
 -- ---------------------------------------------------------------------------
-create table if not exists public.user_preferences (
+create table if not exists transitspotter.user_preferences (
   user_id uuid primary key references auth.users (id) on delete cascade,
   theme text not null default 'system' check (theme in ('light', 'dark', 'system')),
   date_style text not null default 'medium' check (date_style in ('medium', 'short', 'iso', 'long')),
@@ -41,7 +47,7 @@ create table if not exists public.user_preferences (
 -- ---------------------------------------------------------------------------
 -- operators: user-maintained transit operators
 -- ---------------------------------------------------------------------------
-create table if not exists public.operators (
+create table if not exists transitspotter.operators (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
   name text not null check (length(btrim(name)) between 1 and 120),
@@ -54,16 +60,16 @@ create table if not exists public.operators (
 );
 
 create unique index if not exists operators_user_name_unique
-  on public.operators (user_id, lower(name));
-create index if not exists operators_user_id_idx on public.operators (user_id);
+  on transitspotter.operators (user_id, lower(name));
+create index if not exists operators_user_id_idx on transitspotter.operators (user_id);
 
 -- ---------------------------------------------------------------------------
 -- vehicles: the personal fleet database
 -- ---------------------------------------------------------------------------
-create table if not exists public.vehicles (
+create table if not exists transitspotter.vehicles (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
-  operator_id uuid references public.operators (id) on delete set null,
+  operator_id uuid references transitspotter.operators (id) on delete set null,
   fleet_number text check (fleet_number is null or length(btrim(fleet_number)) between 1 and 40),
   manufacturer text check (manufacturer is null or length(btrim(manufacturer)) between 1 and 120),
   model text check (model is null or length(btrim(model)) between 1 and 120),
@@ -82,35 +88,35 @@ create table if not exists public.vehicles (
   updated_at timestamptz not null default now()
 );
 
-comment on column public.vehicles.status is
+comment on column transitspotter.vehicles.status is
   'Manually maintained by the user. Never synchronised from a transit agency.';
-comment on column public.vehicles.cover_photo_id is
+comment on column transitspotter.vehicles.cover_photo_id is
   'Optional cover photograph. Must belong to a sighting of this vehicle (enforced by trigger).';
 
 create unique index if not exists vehicles_user_operator_fleet_unique
-  on public.vehicles (user_id, operator_id, fleet_number)
+  on transitspotter.vehicles (user_id, operator_id, fleet_number)
   where operator_id is not null and fleet_number is not null;
-create index if not exists vehicles_user_id_idx on public.vehicles (user_id);
-create index if not exists vehicles_user_created_idx on public.vehicles (user_id, created_at desc);
-create index if not exists vehicles_user_operator_idx on public.vehicles (user_id, operator_id);
-create index if not exists vehicles_user_status_idx on public.vehicles (user_id, status);
-create index if not exists vehicles_user_model_idx on public.vehicles (user_id, model);
-create index if not exists vehicles_user_manufacturer_idx on public.vehicles (user_id, manufacturer);
-create index if not exists vehicles_cover_photo_idx on public.vehicles (cover_photo_id);
+create index if not exists vehicles_user_id_idx on transitspotter.vehicles (user_id);
+create index if not exists vehicles_user_created_idx on transitspotter.vehicles (user_id, created_at desc);
+create index if not exists vehicles_user_operator_idx on transitspotter.vehicles (user_id, operator_id);
+create index if not exists vehicles_user_status_idx on transitspotter.vehicles (user_id, status);
+create index if not exists vehicles_user_model_idx on transitspotter.vehicles (user_id, model);
+create index if not exists vehicles_user_manufacturer_idx on transitspotter.vehicles (user_id, manufacturer);
+create index if not exists vehicles_cover_photo_idx on transitspotter.vehicles (cover_photo_id);
 create index if not exists vehicles_fleet_trgm_idx
-  on public.vehicles using gin (fleet_number extensions.gin_trgm_ops);
+  on transitspotter.vehicles using gin (fleet_number extensions.gin_trgm_ops);
 create index if not exists vehicles_model_trgm_idx
-  on public.vehicles using gin (model extensions.gin_trgm_ops);
+  on transitspotter.vehicles using gin (model extensions.gin_trgm_ops);
 create index if not exists vehicles_manufacturer_trgm_idx
-  on public.vehicles using gin (manufacturer extensions.gin_trgm_ops);
+  on transitspotter.vehicles using gin (manufacturer extensions.gin_trgm_ops);
 
 -- ---------------------------------------------------------------------------
 -- sightings: one observation of a vehicle at a moment in time
 -- ---------------------------------------------------------------------------
-create table if not exists public.sightings (
+create table if not exists transitspotter.sightings (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
-  vehicle_id uuid not null references public.vehicles (id) on delete cascade,
+  vehicle_id uuid not null references transitspotter.vehicles (id) on delete cascade,
   spotted_at timestamptz not null default now(),
   route text check (route is null or length(btrim(route)) between 1 and 80),
   direction text check (direction is null or length(btrim(direction)) between 1 and 160),
@@ -131,28 +137,28 @@ create table if not exists public.sightings (
 );
 
 create index if not exists sightings_user_spotted_idx
-  on public.sightings (user_id, spotted_at desc);
+  on transitspotter.sightings (user_id, spotted_at desc);
 create index if not exists sightings_vehicle_spotted_idx
-  on public.sightings (vehicle_id, spotted_at desc);
-create index if not exists sightings_user_route_idx on public.sightings (user_id, route);
-create index if not exists sightings_user_created_idx on public.sightings (user_id, created_at desc);
+  on transitspotter.sightings (vehicle_id, spotted_at desc);
+create index if not exists sightings_user_route_idx on transitspotter.sightings (user_id, route);
+create index if not exists sightings_user_created_idx on transitspotter.sightings (user_id, created_at desc);
 create index if not exists sightings_route_trgm_idx
-  on public.sightings using gin (route extensions.gin_trgm_ops);
+  on transitspotter.sightings using gin (route extensions.gin_trgm_ops);
 create index if not exists sightings_location_trgm_idx
-  on public.sightings using gin (location_name extensions.gin_trgm_ops);
+  on transitspotter.sightings using gin (location_name extensions.gin_trgm_ops);
 create index if not exists sightings_notes_trgm_idx
-  on public.sightings using gin (notes extensions.gin_trgm_ops);
+  on transitspotter.sightings using gin (notes extensions.gin_trgm_ops);
 create index if not exists sightings_geo_idx
-  on public.sightings (user_id, latitude, longitude)
+  on transitspotter.sightings (user_id, latitude, longitude)
   where latitude is not null;
 
 -- ---------------------------------------------------------------------------
 -- photos: image metadata; the binary lives in Supabase Storage
 -- ---------------------------------------------------------------------------
-create table if not exists public.photos (
+create table if not exists transitspotter.photos (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
-  sighting_id uuid not null references public.sightings (id) on delete cascade,
+  sighting_id uuid not null references transitspotter.sightings (id) on delete cascade,
   storage_path text not null unique,
   original_filename text not null check (length(original_filename) between 1 and 255),
   mime_type text not null check (mime_type in ('image/jpeg', 'image/png', 'image/webp')),
@@ -167,17 +173,17 @@ create table if not exists public.photos (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists photos_sighting_order_idx on public.photos (sighting_id, sort_order, created_at);
-create index if not exists photos_user_idx on public.photos (user_id);
+create index if not exists photos_sighting_order_idx on transitspotter.photos (sighting_id, sort_order, created_at);
+create index if not exists photos_user_idx on transitspotter.photos (user_id);
 create unique index if not exists photos_one_cover_per_sighting
-  on public.photos (sighting_id) where is_cover;
+  on transitspotter.photos (sighting_id) where is_cover;
 
 do $$
 begin
   if not exists (select 1 from pg_constraint where conname = 'vehicles_cover_photo_fk') then
-    alter table public.vehicles
+    alter table transitspotter.vehicles
       add constraint vehicles_cover_photo_fk
-      foreign key (cover_photo_id) references public.photos (id) on delete set null;
+      foreign key (cover_photo_id) references transitspotter.photos (id) on delete set null;
   end if;
 end;
 $$;
@@ -185,10 +191,10 @@ $$;
 -- ---------------------------------------------------------------------------
 -- vehicle_status_history: append-only manual status timeline
 -- ---------------------------------------------------------------------------
-create table if not exists public.vehicle_status_history (
+create table if not exists transitspotter.vehicle_status_history (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
-  vehicle_id uuid not null references public.vehicles (id) on delete cascade,
+  vehicle_id uuid not null references transitspotter.vehicles (id) on delete cascade,
   previous_status text check (previous_status is null or previous_status in ('active', 'retired', 'scrapped', 'transferred', 'unknown')),
   new_status text not null check (new_status in ('active', 'retired', 'scrapped', 'transferred', 'unknown')),
   changed_on date not null default current_date,
@@ -197,6 +203,6 @@ create table if not exists public.vehicle_status_history (
 );
 
 create index if not exists vehicle_status_history_vehicle_idx
-  on public.vehicle_status_history (vehicle_id, changed_on desc, created_at desc);
+  on transitspotter.vehicle_status_history (vehicle_id, changed_on desc, created_at desc);
 create index if not exists vehicle_status_history_user_idx
-  on public.vehicle_status_history (user_id);
+  on transitspotter.vehicle_status_history (user_id);

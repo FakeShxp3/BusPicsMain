@@ -165,13 +165,14 @@ Open <http://localhost:3000>. The app starts on the sign-in screen; create an ac
    - Publishable key (or legacy anon key) → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 3. Set `NEXT_PUBLIC_SITE_URL` to the origin you use (for example `http://localhost:3000`).
 4. Apply the migrations (next section).
-5. Confirm the storage bucket exists: **Storage → photos** should be **private**, with a 15 MB file limit and allowed MIME types `image/jpeg`, `image/png`, `image/webp`. The migration creates it and its policies.
-6. In **Authentication → URL Configuration**:
+5. In **Project Settings → API → Exposed schemas**, make sure `transitspotter` is listed alongside `public` and `graphql_public`. The migrations create the schema; this setting makes it reachable through PostgREST. This project is already configured with `db_schema = public,transitspotter,graphql_public`.
+6. Confirm the storage bucket exists: **Storage → transitspotter-photos** should be **private**, with a 15 MB file limit and allowed MIME types `image/jpeg`, `image/png`, `image/webp`. The migration creates it and its policies.
+7. In **Authentication → URL Configuration**:
    - **Site URL:** `http://localhost:3000` for local development.
    - **Redirect URLs:** add `http://localhost:3000/**`, and your production origin such as `https://your-app.vercel.app/**`.
    - If you keep email confirmation enabled, use the default confirmation URL; the app exchanges the PKCE `code` at `/auth/callback`. Token-hash templates are also supported at `/auth/confirm`.
-7. Email delivery uses Supabase's built-in SMTP for development. Configure custom SMTP before relying on confirmation or password-reset emails in production.
-8. For local-only experimentation you may disable "Confirm email" in **Authentication → Providers → Email**, but the application supports the confirmed flow and it is recommended.
+8. Email delivery uses Supabase's built-in SMTP for development. Configure custom SMTP before relying on confirmation or password-reset emails in production.
+9. For local-only experimentation you may disable "Confirm email" in **Authentication → Providers → Email**, but the application supports the confirmed flow and it is recommended.
 
 ### Required environment variables
 
@@ -180,7 +181,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-publishable-or-anon-key
 SUPABASE_SERVICE_ROLE_KEY=            # scripts only; optional
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
-NEXT_PUBLIC_SUPABASE_PHOTO_BUCKET=photos
+NEXT_PUBLIC_SUPABASE_PHOTO_BUCKET=transitspotter-photos
 NEXT_PUBLIC_MAX_UPLOAD_MB=15
 ```
 
@@ -192,10 +193,10 @@ The optional `DEMO_*`, `SMOKE_*` and `TEST_USER_*` values are development/verifi
 
 The SQL lives in `supabase/migrations/` and is safe to run in order:
 
-1. `20261018090000_initial_schema.sql` — tables, constraints, partial unique indexes, trigram search indexes.
+1. `20261018090000_initial_schema.sql` — creates the `transitspotter` schema, then its tables, constraints, partial unique indexes and trigram search indexes.
 2. `20261018090100_functions_views.sql` — `updated_at` triggers, new-user bootstrap, cover-photo validation, `record_vehicle_status`, `vehicle_overview`, `sighting_overview`.
-3. `20261018090200_rls.sql` — RLS enabled on every table, ownership policies, explicit grants (authenticated only; anonymous revoked).
-4. `20261018090300_storage.sql` — private `photos` bucket, 15 MB limit, MIME allow-list, folder-ownership policies.
+3. `20261018090200_rls.sql` — RLS enabled on every table, ownership policies, schema usage and explicit grants (authenticated only; anonymous revoked).
+4. `20261018090300_storage.sql` — private `transitspotter-photos` bucket, 15 MB limit, MIME allow-list, folder-ownership policies scoped to that bucket.
 5. `20261018090400_gallery_views.sql` — `photo_overview` and `operator_overview` (`security_invoker = true`).
 
 **Option A — Supabase SQL Editor.** Open each file in order and run it. This requires no CLI.
@@ -209,7 +210,11 @@ pnpm db:migrate
 
 The script reads `supabase/migrations/*.sql` in order, executes each through `POST /v1/projects/{ref}/database/query`, then asks PostgREST to reload its schema cache. It uses `NEXT_PUBLIC_SUPABASE_URL` to derive the project ref. Re-running is safe: tables, indexes and policies use `if not exists` / `drop … if exists`.
 
-The migrations create seven tables (`profiles`, `user_preferences`, `operators`, `vehicles`, `sightings`, `photos`, `vehicle_status_history`), four views and one RPC. No seed data is applied by migrations.
+The migrations create the `transitspotter` schema with seven tables (`profiles`, `user_preferences`, `operators`, `vehicles`, `sightings`, `photos`, `vehicle_status_history`), four views, one RPC and a private storage bucket. No seed data is applied by migrations.
+
+### Why a dedicated schema?
+
+This Supabase project is shared with another application whose tables live in `public`. TransitSpotter therefore owns the `transitspotter` schema and the `transitspotter-photos` bucket, and its Supabase clients set `db: { schema: "transitspotter" }`. Nothing in `public` is read or modified. On a fresh, exclusive project you can still use this layout as-is — it is deliberately namespaced so it can coexist. If the exposed-schema setting is changed later, add `transitspotter` back in **Project Settings → API → Exposed schemas**.
 
 ---
 
@@ -292,19 +297,21 @@ The seed stops rather than duplicating records if the account already has operat
 
 Unit tests cover date/time zone formatting, month ranges, unit conversion, search-term sanitisation, query-string building, text utilities, optional-field coercion, coordinate pairing, status validation and photo type/size rules.
 
-The browser walkthrough produced the screenshots in `docs/screenshots/` at 1440 px desktop and 390 px mobile. It also caught and fixed two real issues during development: a month-label time zone bug and mobile horizontal overflow from auto-sized grid tracks.
+All checks above were re-run after isolating the app into the dedicated `transitspotter` schema. The browser walkthrough produced the screenshots in `docs/screenshots/` at 1440 px desktop and 390 px mobile. It also caught and fixed two real issues during development: a month-label time zone bug and mobile horizontal overflow from auto-sized grid tracks.
 
 ### Manual checks worth repeating
 
 - Sign up with a fresh email, confirm it, sign in, and verify the profile/preferences rows were created automatically.
 - Record a sighting without a photograph, then add one from the sighting page.
-- Delete a sighting with photos and confirm the image objects disappear from **Storage → photos**.
+- Delete a sighting with photos and confirm the image objects disappear from **Storage → transitspotter-photos**.
 - Sign in as a second account and confirm the first account's fleet, sightings and objects are invisible.
 - Open the app at 390 px width and confirm there is no horizontal scrolling.
 
 ---
 
 ## Data model and deletion policy
+
+All seven tables live in the `transitspotter` schema. Foreign keys cascade as described below, and every table carries `created_at`/`updated_at` where meaningful.
 
 | Table | Ownership | Notes |
 | --- | --- | --- |
@@ -313,7 +320,7 @@ The browser walkthrough produced the screenshots in `docs/screenshots/` at 1440 
 | `operators` | `user_id` | Unique name per user (case-insensitive) |
 | `vehicles` | `user_id` | Fleet number unique per user + operator when both exist; free-text specs; `cover_photo_id` validated to belong to the vehicle |
 | `sightings` | `user_id` | Coordinates must be both null or both set; cascade from vehicle |
-| `photos` | `user_id` | Metadata only; one cover per sighting (partial unique index); binary lives in Storage |
+| `photos` | `user_id` | Metadata only; one cover per sighting (partial unique index); binary lives in the private bucket |
 | `vehicle_status_history` | `user_id` | Append-only from the UI; linked to the vehicle |
 
 **Deletion behaviour**
@@ -335,7 +342,7 @@ Storage paths are always `<user id>/<sighting id>/<uuid>.<ext>`, and the storage
 ## Security and privacy
 
 - RLS is enabled on every table. Policies are scoped `to authenticated` and compare `user_id` (or `profiles.id`) with `auth.uid()`. Inserts additionally verify that referenced vehicles/sightings/operators belong to the caller. Anonymous privileges are revoked explicitly.
-- The `photos` bucket is private. Select/insert/update/delete policies require the object path's first segment to equal the caller's user ID. Unsupported MIME types and files over 15 MB are rejected by the bucket itself, and the server re-checks object metadata before inserting a row.
+- The `transitspotter-photos` bucket is private. Select/insert/update/delete policies require the object path's first segment to equal the caller's user ID, and are scoped to this bucket only. Unsupported MIME types and files over 15 MB are rejected by the bucket itself, and the server re-checks object metadata before inserting a row.
 - The service-role key is never referenced in `src/`. It is only read by `scripts/seed.mjs` (optional user creation).
 - Images are displayed through short-lived signed URLs generated server-side after RLS-filtered queries. Original downloads go through `/api/photos/{id}/download`, which checks the session and ownership.
 - GPS/EXIF data embedded in uploads is never read, imported or published. Coordinates come only from the explicit location picker or manual input.
@@ -372,7 +379,7 @@ The JSON export is explicitly **not** a complete backup: image files are not emb
 
 ### Supabase
 
-Apply migrations to the production project (SQL editor or `pnpm db:migrate` with a fresh token). Review the `photos` bucket and policies, configure custom SMTP for auth emails, and consider a custom domain for auth links. The `security_invoker` views require PostgreSQL 15+; the project used here runs 17.11.
+Apply migrations to the production project (SQL editor or `pnpm db:migrate` with a fresh token). Review the `transitspotter-photos` bucket and policies, configure custom SMTP for auth emails, and consider a custom domain for auth links. The `security_invoker` views require PostgreSQL 15+; the project used here runs 17.11.
 
 ---
 
@@ -389,6 +396,7 @@ Apply migrations to the production project (SQL editor or `pnpm db:migrate` with
 - **Email confirmation and password-reset delivery** depend on the Supabase project's SMTP configuration and redirect allow-list.
 - **Default map centre** is a fallback (Vancouver, 49.2827, -123.1207, zoom 11) and is configurable in Settings. Sightings drive the actual map bounds.
 - **No scheduled orphan cleanup.** Failed uploads are removed by the server when validation or the photo insert fails; if a browser vanishes mid-upload, an unreferenced object could remain in the user's own private folder. It is never exposed to anyone else.
+- **Shared Supabase project.** The `public` schema belongs to another application. TransitSpotter stays inside `transitspotter` and `transitspotter-photos`; keep the schema exposed in the API settings. If you want a clean project, re-run the migrations there and add the schema to the exposed list.
 - **Test accounts.** A `demo@transitspotter.test` account and an `isolation@transitspotter.test` account were created to verify the live application and RLS. Their passwords are in the gitignored `.env.local` for local tooling. Delete or rotate both accounts before sharing this project or repository, and never ship the demo migration/data to production.
 - **Migrations contain no sample data**; seeding is always an explicit development step.
 

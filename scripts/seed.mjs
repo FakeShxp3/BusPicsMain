@@ -46,7 +46,7 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const email = process.env.DEMO_EMAIL;
 const password = process.env.DEMO_PASSWORD;
-const bucket = process.env.NEXT_PUBLIC_SUPABASE_PHOTO_BUCKET || "photos";
+const bucket = process.env.NEXT_PUBLIC_SUPABASE_PHOTO_BUCKET || "transitspotter-photos";
 const photosDir = process.env.SEED_PHOTOS_DIR;
 
 if (!url || !anonKey) {
@@ -72,6 +72,7 @@ function isoDateDaysAgo(days) {
 if (serviceKey) {
   const admin = createClient(url, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
+    db: { schema: "transitspotter" },
   });
   const { error } = await admin.auth.admin.createUser({
     email,
@@ -87,6 +88,7 @@ if (serviceKey) {
 
 const supabase = createClient(url, anonKey, {
   auth: { autoRefreshToken: false, persistSession: false },
+    db: { schema: "transitspotter" },
 });
 
 const { data: authData, error: authError } = await supabase.auth.signInWithPassword({

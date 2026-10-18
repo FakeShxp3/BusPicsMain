@@ -3,7 +3,12 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
-import { SUPABASE_ANON_KEY, SUPABASE_URL, assertSupabaseConfigured } from "@/lib/env";
+import {
+  DB_SCHEMA,
+  SUPABASE_ANON_KEY,
+  SUPABASE_URL,
+  assertSupabaseConfigured,
+} from "@/lib/env";
 
 let browserClient: SupabaseClient<Database> | undefined;
 
@@ -14,7 +19,9 @@ let browserClient: SupabaseClient<Database> | undefined;
 export function createClient(): SupabaseClient<Database> {
   assertSupabaseConfigured();
   if (!browserClient) {
-    browserClient = createBrowserClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY);
+    browserClient = createBrowserClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      db: { schema: DB_SCHEMA },
+    });
   }
   return browserClient;
 }

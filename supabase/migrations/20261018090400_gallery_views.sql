@@ -3,7 +3,7 @@
 -- security_invoker keeps the caller's Row Level Security in force.
 -- ===========================================================================
 
-create or replace view public.photo_overview
+create or replace view transitspotter.photo_overview
 with (security_invoker = true)
 as
 select
@@ -37,15 +37,15 @@ select
   v.operator_id,
   o.name as operator_name,
   o.abbreviation as operator_abbreviation
-from public.photos p
-join public.sightings s on s.id = p.sighting_id
-join public.vehicles v on v.id = s.vehicle_id
-left join public.operators o on o.id = v.operator_id;
+from transitspotter.photos p
+join transitspotter.sightings s on s.id = p.sighting_id
+join transitspotter.vehicles v on v.id = s.vehicle_id
+left join transitspotter.operators o on o.id = v.operator_id;
 
-comment on view public.photo_overview is
+comment on view transitspotter.photo_overview is
   'Photographs enriched with sighting, vehicle and operator metadata for the gallery.';
 
-create or replace view public.operator_overview
+create or replace view transitspotter.operator_overview
 with (security_invoker = true)
 as
 select
@@ -61,30 +61,30 @@ select
   coalesce(v.vehicle_count, 0) as vehicle_count,
   coalesce(s.sighting_count, 0) as sighting_count,
   coalesce(p.photo_count, 0) as photo_count
-from public.operators o
+from transitspotter.operators o
 left join lateral (
   select count(*)::integer as vehicle_count
-  from public.vehicles veh
+  from transitspotter.vehicles veh
   where veh.operator_id = o.id
 ) v on true
 left join lateral (
   select count(*)::integer as sighting_count
-  from public.sightings si
-  join public.vehicles veh on veh.id = si.vehicle_id
+  from transitspotter.sightings si
+  join transitspotter.vehicles veh on veh.id = si.vehicle_id
   where veh.operator_id = o.id
 ) s on true
 left join lateral (
   select count(*)::integer as photo_count
-  from public.photos ph
-  join public.sightings si on si.id = ph.sighting_id
-  join public.vehicles veh on veh.id = si.vehicle_id
+  from transitspotter.photos ph
+  join transitspotter.sightings si on si.id = ph.sighting_id
+  join transitspotter.vehicles veh on veh.id = si.vehicle_id
   where veh.operator_id = o.id
 ) p on true;
 
-comment on view public.operator_overview is
+comment on view transitspotter.operator_overview is
   'Operators with vehicle, sighting and photograph counts.';
 
-grant select on public.photo_overview to authenticated;
-grant select on public.operator_overview to authenticated;
-revoke all on public.photo_overview from anon;
-revoke all on public.operator_overview from anon;
+grant select on transitspotter.photo_overview to authenticated;
+grant select on transitspotter.operator_overview to authenticated;
+revoke all on transitspotter.photo_overview from anon;
+revoke all on transitspotter.operator_overview from anon;

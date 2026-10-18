@@ -39,7 +39,7 @@ loadEnvLocal();
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const bucket = process.env.NEXT_PUBLIC_SUPABASE_PHOTO_BUCKET || "photos";
+const bucket = process.env.NEXT_PUBLIC_SUPABASE_PHOTO_BUCKET || "transitspotter-photos";
 
 const credentials = {
   a: { email: process.env.TEST_USER_A_EMAIL, password: process.env.TEST_USER_A_PASSWORD },
@@ -64,6 +64,7 @@ function check(name, passed, detail = "") {
 function client() {
   return createClient(url, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    db: { schema: "transitspotter" },
   });
 }
 

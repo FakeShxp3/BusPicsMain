@@ -90,7 +90,11 @@ async function page(path, { withCookie = true, redirect = "follow" } = {}) {
 
 async function rest(path) {
   const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-    headers: { apikey: anon, Authorization: `Bearer ${token}` },
+    headers: {
+      apikey: anon,
+      Authorization: `Bearer ${token}`,
+      "Accept-Profile": "transitspotter",
+    },
   });
   if (!response.ok) throw new Error(`REST ${path} failed (${response.status})`);
   return response.json();
