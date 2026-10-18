@@ -2,7 +2,7 @@
 
 A private personal bus-spotting database and photography archive. Catalog the buses you photograph, record each sighting, attach originals, explore where you have been spotting, and read your own coverage statistics — all behind Supabase authentication and Row Level Security.
 
-TransitSpotter is deliberately **not** a public gallery or a generic admin dashboard. Every route except sign-in and authentication callbacks requires a session; every row and every image belongs to exactly one account.
+TransitSpotter is deliberately **not** a public gallery or a generic admin dashboard. Every private page and data route requires a session; the only unauthenticated endpoints are sign-in, password recovery, auth callbacks and a configuration health check. Every row and every image belongs to exactly one account.
 
 ![Dashboard in light theme](docs/screenshots/dashboard-light.png)
 
