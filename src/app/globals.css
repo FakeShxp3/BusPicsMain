@@ -1,0 +1,329 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+   TransitSpotter design tokens
+   Deep navy / near-black dark theme, warm off-white light theme,
+   transit blue accent, restrained amber for status emphasis.
+--------------------------------------------------------------------------- */
+:root {
+  --background: oklch(0.982 0.004 85);
+  --foreground: oklch(0.21 0.032 262);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.032 262);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.032 262);
+  --primary: oklch(0.497 0.158 257);
+  --primary-foreground: oklch(0.99 0.002 250);
+  --secondary: oklch(0.955 0.006 85);
+  --secondary-foreground: oklch(0.27 0.03 262);
+  --muted: oklch(0.958 0.005 85);
+  --muted-foreground: oklch(0.505 0.018 258);
+  --accent: oklch(0.775 0.135 74);
+  --accent-foreground: oklch(0.24 0.04 262);
+  --destructive: oklch(0.548 0.188 27);
+  --destructive-foreground: oklch(0.99 0.002 250);
+  --success: oklch(0.52 0.115 156);
+  --warning: oklch(0.7 0.145 74);
+  --border: oklch(0.9 0.006 82);
+  --input: oklch(0.885 0.007 82);
+  --ring: oklch(0.497 0.158 257);
+  --chart-1: oklch(0.497 0.158 257);
+  --chart-2: oklch(0.66 0.12 200);
+  --chart-3: oklch(0.775 0.135 74);
+  --chart-4: oklch(0.52 0.115 156);
+  --chart-5: oklch(0.58 0.11 300);
+  --sidebar: oklch(0.968 0.004 85);
+  --sidebar-foreground: oklch(0.24 0.03 262);
+  --sidebar-border: oklch(0.9 0.006 82);
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: oklch(0.168 0.024 262);
+  --foreground: oklch(0.945 0.006 85);
+  --card: oklch(0.209 0.024 262);
+  --card-foreground: oklch(0.945 0.006 85);
+  --popover: oklch(0.215 0.024 262);
+  --popover-foreground: oklch(0.945 0.006 85);
+  --primary: oklch(0.668 0.135 255);
+  --primary-foreground: oklch(0.16 0.025 262);
+  --secondary: oklch(0.252 0.022 262);
+  --secondary-foreground: oklch(0.94 0.006 85);
+  --muted: oklch(0.245 0.022 262);
+  --muted-foreground: oklch(0.705 0.014 250);
+  --accent: oklch(0.795 0.13 76);
+  --accent-foreground: oklch(0.18 0.03 262);
+  --destructive: oklch(0.65 0.17 25);
+  --destructive-foreground: oklch(0.15 0.02 262);
+  --success: oklch(0.68 0.115 156);
+  --warning: oklch(0.79 0.13 76);
+  --border: oklch(0.302 0.02 262);
+  --input: oklch(0.33 0.022 262);
+  --ring: oklch(0.668 0.135 255);
+  --chart-1: oklch(0.668 0.135 255);
+  --chart-2: oklch(0.74 0.105 200);
+  --chart-3: oklch(0.795 0.13 76);
+  --chart-4: oklch(0.68 0.115 156);
+  --chart-5: oklch(0.7 0.095 300);
+  --sidebar: oklch(0.193 0.024 262);
+  --sidebar-foreground: oklch(0.92 0.006 85);
+  --sidebar-border: oklch(0.285 0.02 262);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-mono-data), ui-monospace, "Cascadia Code", "SFMono-Regular", Menlo, monospace;
+  --font-editorial: var(--font-newsreader), Georgia, "Times New Roman", serif;
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv05" 1, "ss01" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklch, var(--primary) 22%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  /* Native date/time controls in dark mode */
+  .dark input[type="datetime-local"],
+  .dark input[type="date"],
+  .dark input[type="time"] {
+    color-scheme: dark;
+  }
+}
+
+@layer components {
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .numeric {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  .hairline {
+    border-color: color-mix(in oklch, var(--border) 85%, transparent);
+  }
+
+  .surface {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+  }
+
+  .photo-frame {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--muted);
+  }
+
+  .photo-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 500ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .photo-link:hover .photo-frame img {
+    transform: scale(1.02);
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 999px;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Leaflet
+--------------------------------------------------------------------------- */
+.leaflet-container {
+  background-color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  z-index: 0;
+}
+
+.leaflet-container a {
+  color: var(--primary);
+}
+
+.leaflet-bar,
+.leaflet-control-attribution {
+  border-color: var(--border) !important;
+}
+
+.leaflet-bar a {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+.leaflet-bar a:hover {
+  background-color: var(--muted) !important;
+}
+
+.leaflet-control-attribution {
+  background-color: color-mix(in oklch, var(--card) 88%, transparent) !important;
+  color: var(--muted-foreground) !important;
+  font-size: 0.625rem !important;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.35);
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius);
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  width: 260px !important;
+}
+
+.leaflet-popup-close-button {
+  color: var(--muted-foreground) !important;
+}
+
+.ts-marker {
+  display: grid;
+  place-items: center;
+}
+
+.ts-marker__dot {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background-color: var(--primary);
+  border: 2px solid var(--card);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 45%, transparent), 0 2px 8px rgb(0 0 0 / 0.35);
+  transition: transform 150ms ease;
+}
+
+.ts-marker--selected .ts-marker__dot {
+  transform: scale(1.35);
+  background-color: var(--accent);
+}
+
+.ts-marker:hover .ts-marker__dot {
+  transform: scale(1.2);
+}
+
+.ts-map-picker {
+  cursor: crosshair;
+}
+
+/* Recharts polish */
+.recharts-cartesian-axis-tick text {
+  fill: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.recharts-cartesian-grid line {
+  stroke: var(--border);
+  stroke-opacity: 0.6;
+}
+
+.recharts-tooltip-cursor {
+  fill: color-mix(in oklch, var(--primary) 8%, transparent);
+}

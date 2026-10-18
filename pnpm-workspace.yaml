@@ -1,0 +1,5 @@
+minimumReleaseAgeExclude:
+  - '@hookform/resolvers@5.9.2'
+  - lucide-react@1.59.0
+allowBuilds:
+  unrs-resolver: true
